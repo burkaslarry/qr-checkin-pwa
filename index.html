@@ -702,12 +702,25 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
+            loadRecordsFromStorage();
             initializeTabs();
             setDefaultDate();
             updateManualTime();
             setInterval(updateManualTime, 1000);
             setDefaultExportFilename();
         });
+
+        // Storage Functions
+        function saveRecordsToStorage() {
+            localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
+        }
+
+        function loadRecordsFromStorage() {
+            const stored = localStorage.getItem('attendanceRecords');
+            if (stored) {
+                attendanceRecords = JSON.parse(stored);
+            }
+        }
 
         // Tab Management
         function initializeTabs() {
@@ -777,20 +790,20 @@
             const canvas = document.getElementById('qr-canvas');
             canvas.innerHTML = '';
 
-            // Generate new QR code
-            QRCode.toCanvas(qrText, {
+            // Generate new QR code using proper callback
+            QRCode.toCanvas(canvas, qrText, {
                 width: 300,
                 margin: 2,
                 color: {
                     dark: '#134252',
                     light: '#FCFCF9'
                 }
-            }, function(err, qrCanvas) {
-                if (err) {
-                    alert('Error generating QR code: ' + err);
+            }, function(error) {
+                if (error) {
+                    console.error(error);
+                    alert('Error generating QR code: ' + error);
                     return;
                 }
-                canvas.appendChild(qrCanvas);
                 document.getElementById('qr-preview').classList.remove('hidden');
                 currentQRData = qrText;
             });
@@ -803,16 +816,17 @@
                 return;
             }
 
+            // Convert canvas to blob and download
             canvas.toBlob(function(blob) {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `qr-${currentQRData}.png`;
+                a.download = `qr-${currentQRData.replace(/[^a-z0-9-]/gi, '_')}.png`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-            });
+            }, 'image/png');
         }
 
         function clearGeneratorForm() {
@@ -921,6 +935,7 @@
             };
 
             attendanceRecords.unshift(record);
+            saveRecordsToStorage();
             showScannerAlert('Check-in successful for ' + record.name, 'success');
             
             // Reset
@@ -1000,6 +1015,7 @@
             };
 
             attendanceRecords.unshift(record);
+            saveRecordsToStorage();
             alert('Attendance added for ' + name);
             clearManualForm();
             updateRecordsCounts();
@@ -1068,6 +1084,7 @@
         function deleteRecord(index) {
             if (confirm('Are you sure you want to delete this record?')) {
                 attendanceRecords.splice(index, 1);
+                saveRecordsToStorage();
                 renderRecords(document.getElementById('search-filter').value);
             }
         }
@@ -1080,6 +1097,7 @@
 
             if (confirm('Are you sure you want to delete all attendance records? This cannot be undone.')) {
                 attendanceRecords = [];
+                saveRecordsToStorage();
                 renderRecords();
                 alert('All records cleared');
             }
