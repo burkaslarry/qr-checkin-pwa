@@ -573,22 +573,13 @@
             <div class="card">
                 <h2 style="margin-bottom: var(--space-24); font-size: var(--font-size-xl);">Scan QR Code</h2>
                 <div id="scanner-alert" class="hidden"></div>
-                <div id="reader"></div>
                 <div id="scanner-result" class="scanner-result hidden">
-                    <h3>Scanned Data</h3>
+                    <h3>Last Scanned</h3>
                     <div class="result-item"><strong>Name:</strong> <span id="scanned-name"></span></div>
                     <div class="result-item"><strong>Guest Type:</strong> <span id="scanned-type"></span></div>
                     <div class="result-item"><strong>Event Date:</strong> <span id="scanned-date"></span></div>
-                    <button class="btn btn-primary" style="margin-top: var(--space-16);" onclick="confirmScanCheckIn()">Confirm Check-In</button>
                 </div>
-                <div style="margin-top: var(--space-24);">
-                    <h3 style="margin-bottom: var(--space-16); font-size: var(--font-size-lg);">Fallback: Manual Text Input</h3>
-                    <div class="form-group">
-                        <label class="form-label" for="manual-qr-text">Paste or type QR text</label>
-                        <input type="text" id="manual-qr-text" class="form-control" placeholder='e.g., {"name":"Larry Lo","type":"ANCHOR","date":"2025-11-26"}'>
-                    </div>
-                    <button class="btn btn-secondary" onclick="processManualQRText()">Process Text</button>
-                </div>
+                <div id="reader"></div>
             </div>
         </div>
 
@@ -927,8 +918,11 @@
 
             const parsed = parseQRData(decodedText);
             if (parsed) {
-                displayScannedData(parsed);
-                showScannerAlert('QR code scanned successfully!', 'success');
+                // Directly add to attendance record without confirmation
+                addScannedCheckIn(parsed);
+                showScannerAlert(`Check-in successful for ${parsed.name}!`, 'success');
+                // Clear scanner result after successful check-in
+                document.getElementById('scanner-result').classList.add('hidden');
             } else {
                 showScannerAlert('Invalid QR code format', 'error');
             }
@@ -969,74 +963,28 @@
             }
         }
 
-        function displayScannedData(data) {
-            document.getElementById('scanned-name').textContent = data.name;
-            document.getElementById('scanned-type').textContent = data.isExternalGuest ? 'External Guest' : 'Internal (Anchor)';
-            document.getElementById('scanned-date').textContent = data.eventDate;
-            document.getElementById('scanner-result').classList.remove('hidden');
-            currentQRData = data;
-        }
-
-        function confirmScanCheckIn() {
-            if (!currentQRData) {
-                alert('No scanned data to confirm');
-                return;
-            }
-
+        function addScannedCheckIn(data) {
             const record = {
-                name: currentQRData.name,
-                isExternalGuest: currentQRData.isExternalGuest,
+                name: data.name,
+                isExternalGuest: data.isExternalGuest,
                 checkInTime: getCurrentTimestamp(),
-                eventDate: currentQRData.eventDate
+                eventDate: data.eventDate
             };
 
             attendanceRecords.unshift(record);
             saveRecordsToStorage();
-            showScannerAlert('Check-in successful for ' + record.name, 'success');
-            
-            // Reset
-            document.getElementById('scanner-result').classList.add('hidden');
-            currentQRData = null;
-            lastScannedData = '';
-
-            // Update records count
             updateRecordsCounts();
-        }
-
-        function processManualQRText() {
-            const text = document.getElementById('manual-qr-text').value.trim();
-            if (!text) {
-                alert('Please enter QR code text');
-                return;
-            }
-
-            const parsed = parseQRData(text);
-            if (parsed) {
-                displayScannedData(parsed);
-                showScannerAlert('QR text processed successfully!', 'success');
-                document.getElementById('manual-qr-text').value = '';
-                
-                // Automatically add to attendance when manual text is processed
-                const record = {
-                    name: parsed.name,
-                    isExternalGuest: parsed.isExternalGuest,
-                    checkInTime: getCurrentTimestamp(),
-                    eventDate: parsed.eventDate
-                };
-                
-                attendanceRecords.unshift(record);
-                saveRecordsToStorage();
-                showScannerAlert('Check-in successful for ' + record.name, 'success');
-                updateRecordsCounts();
-                
-                // Reset scanner result display
-                setTimeout(() => {
-                    document.getElementById('scanner-result').classList.add('hidden');
-                    currentQRData = null;
-                }, 2000);
-            } else {
-                showScannerAlert('Invalid QR code format. Expected JSON: {"name":"...","type":"ANCHOR|GUEST","date":"YYYY-MM-DD"}', 'error');
-            }
+            
+            // Display the scanned data briefly
+            document.getElementById('scanned-name').textContent = data.name;
+            document.getElementById('scanned-type').textContent = data.isExternalGuest ? 'External Guest' : 'Internal (Anchor)';
+            document.getElementById('scanned-date').textContent = data.eventDate;
+            document.getElementById('scanner-result').classList.remove('hidden');
+            
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                document.getElementById('scanner-result').classList.add('hidden');
+            }, 3000);
         }
 
         function showScannerAlert(message, type) {
