@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>QR Test</title>
+</head>
+<body>
+    <div id="qr-canvas"></div>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode"></script>
+    <script>
+        const canvas = document.getElementById('qr-canvas');
+        console.log('Canvas element:', canvas);
+        console.log('QRCode library:', typeof QRCode);
+        
+        QRCode.toCanvas(canvas, 'Larry Lo-ANCHOR-2025-11-26', {
+            width: 300,
+            margin: 2,
+            color: {
+                dark: '#134252',
+                light: '#FCFCF9'
+            }
+        }, function(error) {
+            if (error) {
+                console.error('Error:', error);
+            } else {
+                console.log('QR Code generated successfully');
+            }
+        });
+    </script>
+</body>
+</html>

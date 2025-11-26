@@ -562,7 +562,7 @@
                 </form>
                 <div id="qr-preview" class="qr-preview hidden">
                     <h3 style="margin-bottom: var(--space-16);">Generated QR Code</h3>
-                    <div id="qr-canvas"></div>
+                    <canvas id="qr-canvas" style="border: 1px solid var(--color-border); border-radius: var(--radius-base); max-width: 100%;"></canvas>
                     <button class="btn btn-primary" style="margin-top: var(--space-16);" onclick="downloadQR()">Download PNG</button>
                 </div>
             </div>
@@ -786,45 +786,70 @@
             const guestType = isExternal ? 'GUEST' : 'ANCHOR';
             const qrText = `${name}-${guestType}-${date}`;
 
-            // Clear previous QR code
+            // Get the canvas element
             const canvas = document.getElementById('qr-canvas');
-            canvas.innerHTML = '';
-
-            // Generate new QR code using proper callback
-            QRCode.toCanvas(canvas, qrText, {
-                width: 300,
-                margin: 2,
-                color: {
-                    dark: '#134252',
-                    light: '#FCFCF9'
-                }
-            }, function(error) {
-                if (error) {
-                    console.error(error);
-                    alert('Error generating QR code: ' + error);
-                    return;
-                }
-                document.getElementById('qr-preview').classList.remove('hidden');
-                currentQRData = qrText;
-            });
+            
+            try {
+                // Generate QR code directly on canvas
+                QRCode.toCanvas(canvas, qrText, {
+                    width: 300,
+                    margin: 2,
+                    color: {
+                        dark: '#134252',
+                        light: '#FCFCF9'
+                    }
+                }, function(error) {
+                    if (error) {
+                        console.error('QR Code error:', error);
+                        alert('Error generating QR code: ' + error);
+                        return;
+                    }
+                    document.getElementById('qr-preview').classList.remove('hidden');
+                    currentQRData = {
+                        text: qrText,
+                        name: name,
+                        type: guestType,
+                        date: date
+                    };
+                });
+            } catch (err) {
+                console.error('Exception:', err);
+                alert('Error: ' + err.message);
+            }
         }
 
         function downloadQR() {
-            const canvas = document.querySelector('#qr-canvas canvas');
-            if (!canvas) {
-                alert('No QR code to download');
+            if (!currentQRData) {
+                alert('No QR code to download. Please generate one first.');
                 return;
             }
 
-            // Convert canvas to blob and download
+            const canvas = document.getElementById('qr-canvas');
+            if (!canvas || canvas.width === 0) {
+                alert('QR code canvas is empty. Please generate a QR code first.');
+                return;
+            }
+
+            // Convert canvas to PNG blob and download
             canvas.toBlob(function(blob) {
+                if (!blob) {
+                    alert('Failed to create image blob');
+                    return;
+                }
+                
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `qr-${currentQRData.replace(/[^a-z0-9-]/gi, '_')}.png`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                const link = document.createElement('a');
+                link.href = url;
+                
+                // Create filename from QR data
+                const filename = `QR-${currentQRData.name}-${currentQRData.date}.png`;
+                link.download = filename;
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Clean up the URL object
                 URL.revokeObjectURL(url);
             }, 'image/png');
         }
@@ -833,6 +858,11 @@
             document.getElementById('qr-generator-form').reset();
             setDefaultDate();
             document.getElementById('qr-preview').classList.add('hidden');
+            const canvas = document.getElementById('qr-canvas');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
             currentQRData = null;
         }
 
