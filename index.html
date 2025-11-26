@@ -562,7 +562,7 @@
                 </form>
                 <div id="qr-preview" class="qr-preview hidden">
                     <h3 style="margin-bottom: var(--space-16);">Generated QR Code</h3>
-                    <canvas id="qr-canvas" style="border: 1px solid var(--color-border); border-radius: var(--radius-base); max-width: 100%;"></canvas>
+                    <div id="qr-canvas"></div>
                     <button class="btn btn-primary" style="margin-top: var(--space-16);" onclick="downloadQR()">Download PNG</button>
                 </div>
             </div>
@@ -690,7 +690,7 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script>
         // Global state
@@ -708,6 +708,7 @@
             updateManualTime();
             setInterval(updateManualTime, 1000);
             setDefaultExportFilename();
+            validateQRForm();
         });
 
         // Storage Functions
@@ -773,6 +774,17 @@
             generateQRCode();
         });
 
+        // Enable/disable Generate button based on input
+        function validateQRForm() {
+            const name = document.getElementById('gen-name').value.trim();
+            const date = document.getElementById('gen-date').value;
+            const btn = document.querySelector('#qr-generator-form button[type="submit"]');
+            btn.disabled = !name || !date;
+        }
+
+        document.getElementById('gen-name').addEventListener('input', validateQRForm);
+        document.getElementById('gen-date').addEventListener('change', validateQRForm);
+
         function generateQRCode() {
             const name = document.getElementById('gen-name').value.trim();
             const isExternal = document.getElementById('gen-external').checked;
@@ -786,35 +798,33 @@
             const guestType = isExternal ? 'GUEST' : 'ANCHOR';
             const qrText = `${name}-${guestType}-${date}`;
 
-            // Get the canvas element
-            const canvas = document.getElementById('qr-canvas');
+            // Get the canvas container
+            const canvasContainer = document.getElementById('qr-canvas');
             
+            // Clear previous QR code
+            canvasContainer.innerHTML = '';
+
             try {
-                // Generate QR code directly on canvas
-                QRCode.toCanvas(canvas, qrText, {
+                // Generate QR code using QRCode library
+                new QRCode(canvasContainer, {
+                    text: qrText,
                     width: 300,
-                    margin: 2,
-                    color: {
-                        dark: '#134252',
-                        light: '#FCFCF9'
-                    }
-                }, function(error) {
-                    if (error) {
-                        console.error('QR Code error:', error);
-                        alert('Error generating QR code: ' + error);
-                        return;
-                    }
-                    document.getElementById('qr-preview').classList.remove('hidden');
-                    currentQRData = {
-                        text: qrText,
-                        name: name,
-                        type: guestType,
-                        date: date
-                    };
+                    height: 300,
+                    colorDark: '#134252',
+                    colorLight: '#FCFCF9',
+                    correctLevel: QRCode.CorrectLevel.H
                 });
+
+                document.getElementById('qr-preview').classList.remove('hidden');
+                currentQRData = {
+                    text: qrText,
+                    name: name,
+                    type: guestType,
+                    date: date
+                };
             } catch (err) {
-                console.error('Exception:', err);
-                alert('Error: ' + err.message);
+                console.error('QR Code generation error:', err);
+                alert('Error generating QR code: ' + err.message);
             }
         }
 
@@ -824,9 +834,9 @@
                 return;
             }
 
-            const canvas = document.getElementById('qr-canvas');
-            if (!canvas || canvas.width === 0) {
-                alert('QR code canvas is empty. Please generate a QR code first.');
+            const canvas = document.querySelector('#qr-canvas canvas');
+            if (!canvas) {
+                alert('QR code canvas not found. Please generate a QR code first.');
                 return;
             }
 
@@ -858,12 +868,9 @@
             document.getElementById('qr-generator-form').reset();
             setDefaultDate();
             document.getElementById('qr-preview').classList.add('hidden');
-            const canvas = document.getElementById('qr-canvas');
-            if (canvas) {
-                const ctx = canvas.getContext('2d');
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-            }
+            document.getElementById('qr-canvas').innerHTML = '';
             currentQRData = null;
+            validateQRForm();
         }
 
         // QR Scanner Functions
