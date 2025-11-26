@@ -795,7 +795,7 @@
                 return;
             }
 
-            const guestType = isExternal ? 'GUEST' : 'ANCHOR';
+            const guestType = isExternal ? 'GUEST' : 'ANCHOR';cannot be 
             const qrText = `${name}-${guestType}-${date}`;
 
             // Get the canvas container
@@ -996,6 +996,25 @@
                 displayScannedData(parsed);
                 showScannerAlert('QR text processed successfully!', 'success');
                 document.getElementById('manual-qr-text').value = '';
+                
+                // Automatically add to attendance when manual text is processed
+                const record = {
+                    name: parsed.name,
+                    isExternalGuest: parsed.isExternalGuest,
+                    checkInTime: getCurrentTimestamp(),
+                    eventDate: parsed.eventDate
+                };
+                
+                attendanceRecords.unshift(record);
+                saveRecordsToStorage();
+                showScannerAlert('Check-in successful for ' + record.name, 'success');
+                updateRecordsCounts();
+                
+                // Reset scanner result display
+                setTimeout(() => {
+                    document.getElementById('scanner-result').classList.add('hidden');
+                    currentQRData = null;
+                }, 2000);
             } else {
                 showScannerAlert('Invalid QR code format. Expected: Name-ANCHOR/GUEST-YYYY-MM-DD', 'error');
             }
