@@ -585,7 +585,7 @@
                     <h3 style="margin-bottom: var(--space-16); font-size: var(--font-size-lg);">Fallback: Manual Text Input</h3>
                     <div class="form-group">
                         <label class="form-label" for="manual-qr-text">Paste or type QR text</label>
-                        <input type="text" id="manual-qr-text" class="form-control" placeholder="e.g., Larry Lo-ANCHOR-2025-11-26">
+                        <input type="text" id="manual-qr-text" class="form-control" placeholder='e.g., {"name":"Larry Lo","type":"ANCHOR","date":"2025-11-26"}'>
                     </div>
                     <button class="btn btn-secondary" onclick="processManualQRText()">Process Text</button>
                 </div>
@@ -796,7 +796,15 @@
             }
 
             const guestType = isExternal ? 'GUEST' : 'ANCHOR';
-            const qrText = `${name}-${guestType}-${date}`;
+            
+            // Create JSON object for QR code
+            const qrData = {
+                name: name,
+                type: guestType,
+                date: date
+            };
+            
+            const qrText = JSON.stringify(qrData);
 
             // Get the canvas container
             const canvasContainer = document.getElementById('qr-canvas');
@@ -931,23 +939,34 @@
         }
 
         function parseQRData(text) {
-            // Format: Name-TYPE-YYYY-MM-DD
-            const parts = text.split('-');
-            if (parts.length < 3) return null;
-
-            const date = parts[parts.length - 1];
-            const type = parts[parts.length - 2];
-            const name = parts.slice(0, parts.length - 2).join('-');
-
-            if ((type !== 'ANCHOR' && type !== 'GUEST') || !date.match(/\d{4}-\d{2}-\d{2}/)) {
+            // Parse JSON format: {"name":"...", "type":"ANCHOR|GUEST", "date":"YYYY-MM-DD"}
+            try {
+                const data = JSON.parse(text);
+                
+                // Validate required fields
+                if (!data.name || !data.type || !data.date) {
+                    return null;
+                }
+                
+                // Validate type is either ANCHOR or GUEST
+                if (data.type !== 'ANCHOR' && data.type !== 'GUEST') {
+                    return null;
+                }
+                
+                // Validate date format YYYY-MM-DD
+                if (!data.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    return null;
+                }
+                
+                return {
+                    name: data.name,
+                    isExternalGuest: data.type === 'GUEST',
+                    eventDate: data.date
+                };
+            } catch (err) {
+                // Not valid JSON, return null
                 return null;
             }
-
-            return {
-                name: name,
-                isExternalGuest: type === 'GUEST',
-                eventDate: date
-            };
         }
 
         function displayScannedData(data) {
@@ -1016,7 +1035,7 @@
                     currentQRData = null;
                 }, 2000);
             } else {
-                showScannerAlert('Invalid QR code format. Expected: Name-ANCHOR/GUEST-YYYY-MM-DD', 'error');
+                showScannerAlert('Invalid QR code format. Expected JSON: {"name":"...","type":"ANCHOR|GUEST","date":"YYYY-MM-DD"}', 'error');
             }
         }
 
