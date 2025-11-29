@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Member Check-In - BNI Anchor</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>QR Check-In PWA</h1>
+            <p>Event Attendance Management System</p>
+        </div>
+
+        <a href="/" class="back-btn">← Back to Home</a>
+
+        <div class="card">
+            <h2>Member Check-In</h2>
+            <p style="margin-bottom: 16px; color: var(--color-text-secondary);">Scan the Event QR Code to proceed.</p>
+            
+            <div id="member-scanner-container">
+                <div id="member-reader"></div>
+            </div>
+
+            <form id="member-form" class="hidden" style="margin-top: 24px;">
+                <div class="alert alert-success">Event verified: <span id="member-event-name"></span></div>
+                <div class="form-group">
+                    <label class="form-label" for="member-select">Select Name</label>
+                    <select id="member-select" class="form-control" required>
+                        <option value="">-- Select your name --</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Check In</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="/static/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            app.initMember();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guest Check-In - BNI Anchor</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>QR Check-In PWA</h1>
+            <p>Event Attendance Management System</p>
+        </div>
+
+        <a href="/" class="back-btn">← Back to Home</a>
+        
+        <div class="card">
+            <h2>Guest Check-In</h2>
+            <p style="margin-bottom: 16px; color: var(--color-text-secondary);">Scan the Event QR Code to proceed.</p>
+            
+            <div id="guest-scanner-container">
+                <div id="guest-reader"></div>
+            </div>
+
+            <form id="guest-form" class="hidden" style="margin-top: 24px;">
+                <div class="alert alert-success">Event verified: <span id="guest-event-name"></span></div>
+                <div class="form-group">
+                    <label class="form-label" for="guest-name">Full Name</label>
+                    <input type="text" id="guest-name" class="form-control" placeholder="Enter your full name" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Check In</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="/static/js/app.js"></script>
+    <script>
+        // Auto-init guest view
+        document.addEventListener('DOMContentLoaded', () => {
+            app.initGuest();
+        });
+    </script>
+</body>
+</html>

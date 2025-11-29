@@ -1,0 +1,353 @@
+const app = {
+    state: {
+        socket: null,
+        scanner: null,
+        currentEvent: null, 
+        records: []
+    },
+
+    // --- Init Methods ---
+
+    initGuest() {
+        this.startScanner('guest-reader', 'guest');
+        document.getElementById('guest-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.handleCheckIn('guest');
+        });
+    },
+
+    initMember() {
+        this.fetchMembers();
+        this.startScanner('member-reader', 'member');
+        document.getElementById('member-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.handleCheckIn('member');
+        });
+    },
+
+    initAdmin() {
+        this.connectWebSocket();
+        this.fetchRecords();
+        this.bindAdminEvents();
+        // Set default date
+        const dateInput = document.getElementById('event-date');
+        if (dateInput) {
+            dateInput.value = new Date().toISOString().split('T')[0];
+        }
+        this.updateTime();
+        setInterval(() => this.updateTime(), 1000);
+    },
+
+    bindAdminEvents() {
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tabId = e.target.dataset.tab;
+                this.switchAdminTab(tabId);
+            });
+        });
+
+        // Forms
+        const qrForm = document.getElementById('qr-generator-form');
+        if (qrForm) {
+            qrForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.generateEventQR();
+            });
+        }
+
+        const manualForm = document.getElementById('manual-entry-form');
+        if (manualForm) {
+            manualForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.handleManualEntry();
+            });
+        }
+    },
+
+    switchAdminTab(tabId) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+    },
+
+    // --- Shared Logic ---
+
+    async fetchMembers() {
+        try {
+            const response = await fetch('/api/members');
+            const data = await response.json();
+            const select = document.getElementById('member-select');
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">-- Select your name --</option>';
+            data.members.forEach(member => {
+                const option = document.createElement('option');
+                option.value = member;
+                option.textContent = member;
+                select.appendChild(option);
+            });
+        } catch (err) {
+            console.error('Failed to load members:', err);
+        }
+    },
+
+    // --- Scanner Logic ---
+    startScanner(elementId, type) {
+        if (this.state.scanner) return;
+        const elem = document.getElementById(elementId);
+        if (!elem) return;
+
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        
+        this.state.scanner = new Html5Qrcode(elementId);
+        
+        this.state.scanner.start(
+            { facingMode: "environment" },
+            config,
+            (decodedText, decodedResult) => {
+                this.onScanSuccess(decodedText, type);
+            },
+            (errorMessage) => { }
+        ).catch(err => {
+            console.error('Error starting scanner', err);
+            // alert('Camera access required for scanning.');
+        });
+    },
+
+    stopScanner() {
+        if (this.state.scanner) {
+            this.state.scanner.stop().then(() => {
+                this.state.scanner.clear();
+                this.state.scanner = null;
+            }).catch(err => console.error(err));
+        }
+    },
+
+    onScanSuccess(decodedText, type) {
+        try {
+            const data = JSON.parse(decodedText);
+            if (data.eventName && data.date) {
+                this.state.currentEvent = data;
+                this.stopScanner();
+                
+                if (type === 'guest') {
+                    document.getElementById('guest-scanner-container').classList.add('hidden');
+                    document.getElementById('guest-form').classList.remove('hidden');
+                    document.getElementById('guest-event-name').textContent = data.eventName;
+                } else if (type === 'member') {
+                    document.getElementById('member-scanner-container').classList.add('hidden');
+                    document.getElementById('member-form').classList.remove('hidden');
+                    document.getElementById('member-event-name').textContent = data.eventName;
+                }
+            } else {
+                alert('Invalid Event QR Code');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Invalid QR Code Format');
+        }
+    },
+
+    // --- Check-in Logic ---
+    async handleCheckIn(type) {
+        let name;
+        if (type === 'guest') {
+            name = document.getElementById('guest-name').value;
+        } else {
+            name = document.getElementById('member-select').value;
+        }
+
+        if (!name) return;
+
+        const payload = {
+            name: name,
+            type: type, 
+            currentTime: new Date().toISOString()
+        };
+
+        try {
+            const response = await fetch('/api/checkin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                alert('Check-in Successful! Welcome ' + name);
+                window.location.href = '/';
+            } else {
+                alert('Check-in failed. Please try again.');
+            }
+        } catch (err) {
+            alert('Network error: ' + err.message);
+        }
+    },
+
+    async handleManualEntry() {
+        const name = document.getElementById('manual-name').value;
+        const isExternal = document.getElementById('manual-external').checked;
+        const type = isExternal ? 'guest' : 'member';
+        
+        if (!name) return;
+
+        const payload = {
+            name: name,
+            type: type,
+            currentTime: new Date().toISOString()
+        };
+
+        try {
+            const response = await fetch('/api/checkin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                alert('Manual entry added');
+                document.getElementById('manual-entry-form').reset();
+            }
+        } catch (err) {
+            alert('Error: ' + err.message);
+        }
+    },
+
+    // --- Admin Logic ---
+    generateEventQR() {
+        const name = document.getElementById('event-name').value;
+        const date = document.getElementById('event-date').value;
+
+        if (!name || !date) return;
+
+        fetch('/api/events', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name, date: date })
+        }).then(res => {
+            if (res.ok) console.log('Event registered');
+        }).catch(err => console.error('Error registering event:', err));
+
+        const qrData = {
+            eventName: name,
+            date: date,
+            id: Date.now().toString()
+        };
+
+        const canvas = document.getElementById('qr-canvas');
+        canvas.innerHTML = '';
+        
+        new QRCode(canvas, {
+            text: JSON.stringify(qrData),
+            width: 300,
+            height: 300
+        });
+
+        document.getElementById('qr-preview').classList.remove('hidden');
+    },
+
+    downloadQR() {
+        const canvas = document.querySelector('#qr-canvas canvas');
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL("image/png");
+        link.download = 'event-qr.png';
+        link.click();
+    },
+
+    updateTime() {
+        const now = new Date().toLocaleString();
+        const manualTime = document.getElementById('manual-time');
+        if (manualTime) manualTime.value = now;
+    },
+
+    // --- WebSocket & Records ---
+    connectWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/records`;
+        
+        this.state.socket = new WebSocket(wsUrl);
+        
+        this.state.socket.onopen = () => {
+            const status = document.getElementById('connection-status');
+            if(status) {
+                status.textContent = 'Live';
+                status.className = 'badge badge-yes';
+            }
+        };
+        
+        this.state.socket.onclose = () => {
+            const status = document.getElementById('connection-status');
+            if(status) {
+                status.textContent = 'Disconnected';
+                status.className = 'badge badge-no';
+            }
+            setTimeout(() => this.connectWebSocket(), 5000);
+        };
+
+        this.state.socket.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'new_checkin') {
+                this.addRecordToTable(msg.data);
+                this.updateStats();
+            }
+        };
+    },
+
+    async fetchRecords() {
+        try {
+            const response = await fetch('/api/records');
+            const data = await response.json();
+            this.state.records = data.records;
+            this.renderTable();
+            this.updateStats();
+        } catch (err) {
+            console.error(err);
+        }
+    },
+
+    renderTable() {
+        const tbody = document.getElementById('records-tbody');
+        if (!tbody) return;
+
+        if (this.state.records.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="empty-state">No records yet</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = '';
+        [...this.state.records].reverse().forEach(record => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${record.name}</td>
+                <td><span class="badge ${record.type === 'guest' ? 'badge-no' : 'badge-yes'}">${record.type.toUpperCase()}</span></td>
+                <td>${new Date(record.timestamp).toLocaleString()}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    },
+
+    addRecordToTable(record) {
+        this.state.records.push(record);
+        this.renderTable();
+    },
+
+    updateStats() {
+        const total = this.state.records.length;
+        const guests = this.state.records.filter(r => r.type === 'guest').length;
+        const members = total - guests;
+
+        const totalEl = document.getElementById('total-count');
+        const guestEl = document.getElementById('guest-count');
+        const memberEl = document.getElementById('member-count');
+        
+        if (totalEl) totalEl.textContent = total;
+        if (guestEl) guestEl.textContent = guests;
+        if (memberEl) memberEl.textContent = members;
+    },
+    
+    exportCSV() {
+        window.location.href = '/api/export';
+    }
+};
