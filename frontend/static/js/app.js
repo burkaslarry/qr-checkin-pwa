@@ -6,6 +6,11 @@ const app = {
         records: []
     },
 
+    getApiUrl(path) {
+        const base = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE_URL) ? CONFIG.API_BASE_URL : '';
+        return `${base}${path}`;
+    },
+
     // --- Init Methods ---
 
     initGuest() {
@@ -77,7 +82,7 @@ const app = {
 
     async fetchMembers() {
         try {
-            const response = await fetch('/api/members');
+            const response = await fetch(this.getApiUrl('/api/members'));
             const data = await response.json();
             const select = document.getElementById('member-select');
             if (!select) return;
@@ -169,7 +174,7 @@ const app = {
         };
 
         try {
-            const response = await fetch('/api/checkin', {
+            const response = await fetch(this.getApiUrl('/api/checkin'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -200,7 +205,7 @@ const app = {
         };
 
         try {
-            const response = await fetch('/api/checkin', {
+            const response = await fetch(this.getApiUrl('/api/checkin'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -222,7 +227,7 @@ const app = {
 
         if (!name || !date) return;
 
-        fetch('/api/events', {
+        fetch(this.getApiUrl('/api/events'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: name, date: date })
@@ -264,8 +269,18 @@ const app = {
 
     // --- WebSocket & Records ---
     connectWebSocket() {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws/records`;
+        let wsUrl;
+        if (typeof CONFIG !== 'undefined' && CONFIG.API_BASE_URL) {
+            const base = CONFIG.API_BASE_URL;
+            // Handle both http/https and potential trailing slashes
+            const url = new URL(base.startsWith('http') ? base : `http://${base}`);
+            url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+            url.pathname = '/ws/records';
+            wsUrl = url.toString();
+        } else {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            wsUrl = `${protocol}//${window.location.host}/ws/records`;
+        }
         
         this.state.socket = new WebSocket(wsUrl);
         
@@ -297,7 +312,7 @@ const app = {
 
     async fetchRecords() {
         try {
-            const response = await fetch('/api/records');
+            const response = await fetch(this.getApiUrl('/api/records'));
             const data = await response.json();
             this.state.records = data.records;
             this.renderTable();
@@ -348,6 +363,6 @@ const app = {
     },
     
     exportCSV() {
-        window.location.href = '/api/export';
+        window.location.href = this.getApiUrl('/api/export');
     }
 };

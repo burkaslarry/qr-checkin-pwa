@@ -1,0 +1,9 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/guest", "destination": "/guest.html" },
+    { "source": "/member", "destination": "/member.html" },
+    { "source": "/admin", "destination": "/admin.html" }
+  ]
+}
