@@ -23,7 +23,7 @@ const app = {
 
     initMember() {
         this.fetchMembers();
-        this.startScanner('member-reader', 'member');
+        // this.startScanner('member-reader', 'member'); // Scanner disabled for now
         document.getElementById('member-form').addEventListener('submit', (e) => {
             e.preventDefault();
             this.handleCheckIn('member');

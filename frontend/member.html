@@ -19,12 +19,12 @@
             <h2>Member Check-In</h2>
             <p style="margin-bottom: 16px; color: var(--color-text-secondary);">Scan the Event QR Code to proceed.</p>
             
-            <div id="member-scanner-container">
+            <div id="member-scanner-container" class="hidden">
                 <div id="member-reader"></div>
             </div>
 
-            <form id="member-form" class="hidden" style="margin-top: 24px;">
-                <div class="alert alert-success">Event verified: <span id="member-event-name"></span></div>
+            <form id="member-form" style="margin-top: 24px;">
+                <!-- <div class="alert alert-success">Event verified: <span id="member-event-name"></span></div> -->
                 <div class="form-group">
                     <label class="form-label" for="member-select">Select Name</label>
                     <select id="member-select" class="form-control" required>
