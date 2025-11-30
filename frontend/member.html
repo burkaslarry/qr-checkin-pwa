@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Member Check-In - BNI Anchor</title>
-    <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
     <div class="container">
@@ -36,13 +35,7 @@
         </div>
     </div>
 
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="/static/js/app.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            app.initMember();
-        });
-    </script>
+    <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
 

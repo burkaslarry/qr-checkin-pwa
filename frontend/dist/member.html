@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guest Check-In - BNI Anchor</title>
+    <title>Member Check-In - BNI Anchor</title>
+  <script type="module" crossorigin src="/assets/main-BsQYnSJw.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/main-C-keOxA4.css">
 </head>
 <body>
     <div class="container">
@@ -13,27 +15,28 @@
         </div>
 
         <a href="/index.html" class="back-btn">← Back to Home</a>
-        
+
         <div class="card">
-            <h2>Guest Check-In</h2>
+            <h2>Member Check-In</h2>
             <p style="margin-bottom: 16px; color: var(--color-text-secondary);">Scan the Event QR Code to proceed.</p>
             
-            <div id="guest-scanner-container">
-                <div id="guest-reader"></div>
+            <div id="member-scanner-container" class="hidden">
+                <div id="member-reader"></div>
             </div>
 
-            <form id="guest-form" class="hidden" style="margin-top: 24px;">
-                <div class="alert alert-success">Event verified: <span id="guest-event-name"></span></div>
+            <form id="member-form" style="margin-top: 24px;">
+                <!-- <div class="alert alert-success">Event verified: <span id="member-event-name"></span></div> -->
                 <div class="form-group">
-                    <label class="form-label" for="guest-name">Full Name</label>
-                    <input type="text" id="guest-name" class="form-control" placeholder="Enter your full name" required>
+                    <label class="form-label" for="member-select">Select Name</label>
+                    <select id="member-select" class="form-control" required>
+                        <option value="">-- Select your name --</option>
+                    </select>
                 </div>
                 <button type="submit" class="btn btn-primary" style="width: 100%;">Check In</button>
             </form>
         </div>
     </div>
 
-    <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
 
