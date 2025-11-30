@@ -182,7 +182,7 @@ const app = {
 
             if (response.ok) {
                 alert('Check-in Successful! Welcome ' + name);
-                window.location.href = '/';
+                window.location.href = '/index.html';
             } else {
                 alert('Check-in failed. Please try again.');
             }
