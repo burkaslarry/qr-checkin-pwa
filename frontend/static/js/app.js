@@ -33,6 +33,7 @@ const app = {
     initAdmin() {
         this.connectWebSocket();
         this.fetchRecords();
+        this.fetchMembersForAdmin(); // Fetch members for dropdown
         this.bindAdminEvents();
         // Set default date
         const dateInput = document.getElementById('event-date');
@@ -46,10 +47,12 @@ const app = {
     bindAdminEvents() {
         // Tab switching
         document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const tabId = e.target.dataset.tab;
-                this.switchAdminTab(tabId);
-            });
+            if (btn.dataset.tab) {
+                btn.addEventListener('click', (e) => {
+                    const tabId = e.target.dataset.tab;
+                    this.switchAdminTab(tabId);
+                });
+            }
         });
 
         // Forms
@@ -61,14 +64,54 @@ const app = {
             });
         }
 
-        const manualForm = document.getElementById('manual-entry-form');
-        if (manualForm) {
-            manualForm.addEventListener('submit', (e) => {
+        // Manual Forms
+        const internalForm = document.getElementById('manual-entry-form-internal');
+        if (internalForm) {
+            internalForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                this.handleManualEntry();
+                this.handleManualEntry('internal');
+            });
+        }
+
+        const externalForm = document.getElementById('manual-entry-form-external');
+        if (externalForm) {
+            externalForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.handleManualEntry('external');
             });
         }
     },
+
+    switchManualTab(type) {
+        // Toggle Buttons
+        const buttons = document.querySelectorAll('#admin-manual .tab-btn');
+        buttons.forEach(btn => btn.classList.remove('active'));
+        if (event && event.target) event.target.classList.add('active');
+
+        // Toggle Content
+        document.getElementById('manual-internal').style.display = type === 'internal' ? 'block' : 'none';
+        document.getElementById('manual-external').style.display = type === 'external' ? 'block' : 'none';
+    },
+
+    async fetchMembersForAdmin() {
+        try {
+            const response = await fetch(this.getApiUrl('/api/members'));
+            const data = await response.json();
+            const select = document.getElementById('manual-member-select');
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">-- Select Member --</option>';
+            data.members.forEach(member => {
+                const option = document.createElement('option');
+                option.value = member;
+                option.textContent = member;
+                select.appendChild(option);
+            });
+        } catch (err) {
+            console.error('Failed to load members for admin:', err);
+        }
+    },
+
 
     switchAdminTab(tabId) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -191,10 +234,16 @@ const app = {
         }
     },
 
-    async handleManualEntry() {
-        const name = document.getElementById('manual-name').value;
-        const isExternal = document.getElementById('manual-external').checked;
-        const type = isExternal ? 'guest' : 'member';
+    async handleManualEntry(entryType) {
+        let name, type;
+        
+        if (entryType === 'internal') {
+            name = document.getElementById('manual-member-select').value;
+            type = 'member';
+        } else {
+            name = document.getElementById('manual-guest-name').value;
+            type = 'guest';
+        }
         
         if (!name) return;
 
@@ -213,7 +262,11 @@ const app = {
 
             if (response.ok) {
                 alert('Manual entry added');
-                document.getElementById('manual-entry-form').reset();
+                if (entryType === 'internal') {
+                    document.getElementById('manual-entry-form-internal').reset();
+                } else {
+                    document.getElementById('manual-entry-form-external').reset();
+                }
             }
         } catch (err) {
             alert('Error: ' + err.message);
@@ -263,8 +316,11 @@ const app = {
 
     updateTime() {
         const now = new Date().toLocaleString();
-        const manualTime = document.getElementById('manual-time');
-        if (manualTime) manualTime.value = now;
+        const internalTime = document.getElementById('manual-time-internal');
+        const externalTime = document.getElementById('manual-time-external');
+        
+        if (internalTime) internalTime.value = now;
+        if (externalTime) externalTime.value = now;
     },
 
     // --- WebSocket & Records ---
